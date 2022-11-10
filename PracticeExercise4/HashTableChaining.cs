@@ -67,7 +67,7 @@ namespace PracticeExercise4
             // then append a new bucket to that list
 
             var newBucket = new Bucket<K, V>(key, value);
-            list.Append(newBucket);
+            list.AddFirst(newBucket);
             count++;
 
             return false;
