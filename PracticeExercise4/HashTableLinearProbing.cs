@@ -1,118 +1,214 @@
 ﻿using System;
+using System.Data;
+using System.Diagnostics;
 
 namespace PracticeExercise4
 {
-	public class HashTableLinearProbing<K,V>: IHashTable<K,V>
-	{
+    public class HashTableLinearProbing<K, V> : IHashTable<K, V>
+    {
 
         private Bucket<K, V>[] buckets;
         private int initialCapacity = 16;
 
 
-		public HashTableLinearProbing()
-		{
+        public HashTableLinearProbing()
+        {
             buckets = new Bucket<K, V>[initialCapacity];
 
-            for(int i= 0; i < buckets.Length; i++)
+            for (int i = 0; i < buckets.Length; i++)
             {
                 buckets[i] = new Bucket<K, V>();
             }
 
-		}
+        }
 
         private int count;
-        //If it get more than 60% full, then you will resize
         private readonly double MAX_LOAD_FACTOR = 0.6;
 
         public int Count => count;
 
         public double LoadFactor => count / (double)buckets.Length;
 
-        //O(1) -average case
-        //O(n) -worst case
+        // O(1) - average case
+        // O(n) - worst case
         public bool Add(K key, V value)
         {
-            if(LoadFactor > MAX_LOAD_FACTOR)
+            if (LoadFactor > MAX_LOAD_FACTOR)
             {
                 Resize();
             }
-            // find the heash
+
+            // find the hash
             int hash = Hash(key);
 
-            //find the starting index
+            // find the starting index
             int startingIndex = hash % buckets.Length;
             int bucketIndex = startingIndex;
-            
+
             while (buckets[bucketIndex].State == BucketState.Full)
             {
-                //if the key already exists, then update it
+                // if the key already exists, then update it.
                 if (buckets[bucketIndex].Key.Equals(key))
                 {
                     buckets[bucketIndex].Value = value;
                     return true;
                 }
 
+
                 bucketIndex = (bucketIndex + 1) % buckets.Length;
 
-                if(bucketIndex == startingIndex)
+                if (bucketIndex == startingIndex)
                 {
                     throw new OutOfMemoryException();
                 }
             }
 
-
-            //if the key doesn't exist, then add it
+            // if the key doesn't exist, then add it.
             buckets[bucketIndex].Key = key;
             buckets[bucketIndex].Value = value;
             buckets[bucketIndex].State = BucketState.Full;
             count++;
             return false;
+
         }
 
-        //O(1) -average case
-        //O(n) -worst case
+        // O(1) - average case
+        // O(n) - worst case
         public bool ContainsKey(K key)
         {
-            throw new NotImplementedException();
+            var things = GetKeys();
+
+            foreach(var thing in things)
+            {
+                if(thing.Equals(key))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+
         }
 
-        //O(n) -average case
+        // O(n) - average case
+        // O(n) - worst case
         public bool ContainsValue(V value)
         {
-            throw new NotImplementedException();
+            var things = GetValues();
+
+            foreach (var thing in things)
+            {
+                if (thing.Equals(value))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
-        //O(1) -average case
-        //O(n) -worst case
+        // O(1) - average case
+        // O(n) - worst case
         public V Get(K key)
         {
-            throw new NotImplementedException();
+            // compute the hash
+            int hash = Hash(key);
+
+            // compute the index
+            int startingIndex = hash % buckets.Length;
+
+            //find the list
+            var bucketIndex = startingIndex;
+
+            while (buckets[bucketIndex].State != BucketState.EmptySinceStart)
+            {
+                if (buckets[bucketIndex].Key.Equals(key) && buckets[bucketIndex].State == BucketState.Full)
+                {
+                    return buckets[bucketIndex].Value;
+                }
+
+                bucketIndex = (bucketIndex + 1) % buckets.Length;
+
+                if (bucketIndex == startingIndex)
+                {
+                    throw new OutOfMemoryException();
+                }
+            }
+
+            return default(V);
+
         }
 
-        //O(n) -average case
+        // O(n) - average case
+        // O(n) - worst case
         public List<K> GetKeys()
         {
-            throw new NotImplementedException();
+            List<K> keys = new List<K>();
+
+            foreach(var bucket in buckets)
+            {
+                if(bucket.State == BucketState.Full)
+                {
+                    keys.Add(bucket.Key);
+
+                }
+            }
+
+            return keys;
         }
 
-        //O(n) -average case
+        // O(n) - average case
+        // O(n) - worst case
         public List<V> GetValues()
         {
-            throw new NotImplementedException();
+
+            List<V> values = new List<V>();
+
+            foreach (var bucket in buckets)
+            {
+                if (bucket.State == BucketState.Full)
+                {
+                    values.Add(bucket.Value);
+
+                }
+            }
+
+            return values;
         }
 
-        //O(1) -average case
-        //O(n) -worst case
+        // O(1) - average case
+        // O(n) - worst case
         public bool Remove(K key)
         {
-            throw new NotImplementedException();
-        }
 
-        private int Hash(K key)
-        {
-            int hash = key.GetHashCode();
+            // find the hash
+            int hash = Hash(key);
 
-            return hash < 0 ? -hash : hash;
+            // find the starting index
+            int startingIndex = hash % buckets.Length;
+
+            int bucketIndex = startingIndex;
+
+            while (buckets[bucketIndex].State == BucketState.Full)
+            {
+                if (buckets[bucketIndex].Key.Equals(key))
+                {
+                    buckets[bucketIndex].Clear();
+                    count--;
+                    return true;
+                }
+
+                bucketIndex = (bucketIndex + 1) % buckets.Length;
+
+                if (bucketIndex == startingIndex)
+                {
+                    throw new OutOfMemoryException();
+                }
+
+            }
+        
+            return false;
+
         }
 
         private void Resize()
@@ -121,17 +217,29 @@ namespace PracticeExercise4
             var oldBuckets = buckets;
 
             buckets = newBuckets;
-            for(int i = 0; i < buckets.Length; i++)
+            for (int i = 0; i < buckets.Length; i++)
             {
                 buckets[i] = new Bucket<K, V>();
             }
 
             count = 0;
-            //rehash all the old or existing buckets into the new array/hashtable
-            foreach(var bucket in oldBuckets)
+
+            // rehash all the old/existing buckets into the new array/hashtable
+            foreach (var bucket in oldBuckets)
             {
-                Add(bucket.Key, bucket.Value);
+                if (bucket.State == BucketState.Full)
+                {
+                    Add(bucket.Key, bucket.Value);
+                }
             }
+        }
+
+
+        private int Hash(K key)
+        {
+            int hash = key.GetHashCode();
+
+            return hash < 0 ? -hash : hash;
         }
     }
 }
